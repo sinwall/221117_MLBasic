@@ -132,3 +132,4 @@ dmypy.json
 # custom
 docs/
 output/
+SW/input/
