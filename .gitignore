@@ -133,3 +133,5 @@ dmypy.json
 docs/
 output/
 SW/input/
+SW/trash
+SW/default
