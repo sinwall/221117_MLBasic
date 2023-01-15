@@ -91,7 +91,7 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
 
 from sklearn.base import TransformerMixin, BaseEstimator
 class BasicTransformer(BaseEstimator,TransformerMixin):
-    version= 3
+    version= 4
     raw_columns=['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
        'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6', 'BILL_AMT_1', 'BILL_AMT_2',
        'BILL_AMT_3', 'BILL_AMT_4', 'BILL_AMT_5', 'BILL_AMT_6', 'PAY_AMT_1',
@@ -106,8 +106,9 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
        'log_PAY_AMT_4', 'log_PAY_AMT_5', 'log_PAY_AMT_6', 'log_USAGE_1',
        'log_USAGE_2', 'log_USAGE_3', 'log_USAGE_4', 'log_USAGE_5',
        'log_DIFF_0', 'log_DIFF_1', 'log_DIFF_2', 'log_DIFF_3', 'log_DIFF_4']
-    def __init__(self,scale = 'log'):            
+    def __init__(self,scale = 'log',manuel=None):            
         self.scale = scale 
+        self.manuel = manuel
     def fit(self,x=None , y = None):
         return self
     def log_pre (self,x):
@@ -137,15 +138,18 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
         self.USAGE =USAGE
         df = pd.concat([df,df_usage.iloc[:,1:],df_difference.iloc[:,1:]],axis=1)
         ## Logarithmic Scaling attribute 
-        if self.scale == 'log':
-            df_log =pd.concat([df.ID,df[LIM+BILL+PAY+USAGE+DIFF].apply(self.log_pre_col,axis=0)],axis=1) #apply(function,axis=) map of those who use index/column as a index
-            rename_dict = {}
-            for i in df_log.iloc[:,1:].columns:
-                rename_dict[i] = 'log_'+i
-            df_log =df_log.rename(rename_dict,axis=1)
-            df = pd.concat([df,df_log[[column for column in df_log.columns if column !='ID']]],axis=1)
+        if self.manuel == None:
+            if self.scale != 'log':
+                return df[self.raw_columns]
+        df_log =pd.concat([df.ID,df[LIM+BILL+PAY+USAGE+DIFF].apply(self.log_pre_col,axis=0)],axis=1) #apply(function,axis=) map of those who use index/column as a index
+        rename_dict = {}
+        for i in df_log.iloc[:,1:].columns:
+            rename_dict[i] = 'log_'+i
+        df_log =df_log.rename(rename_dict,axis=1)
+        df = pd.concat([df,df_log[[column for column in df_log.columns if column !='ID']]],axis=1)
+        if self.scale == 'log' :
             return df[self.log_columns]
-        return df[self.raw_columns]
+        return df[self.manuel]
         # return df[self.columns].to_numpy()
     
 from pyts.multivariate.transformation import MultivariateTransformer
@@ -232,14 +236,17 @@ class NonTsPass(BaseEstimator, TransformerMixin):
     columns = [
         'SEX',
         'EDUCATION',
-        'AGE']
-    def __init__(self,OH_columns=None,enc=None):
+        'MARRIAGE'
+       # 'AGE'
+        ]
+    def __init__(self,OH_columns=None,enc=OneHotEncoder(handle_unknown='ignore',sparse_output=False)):
         self.OH_columns = OH_columns
-        self.enc = OneHotEncoder(handle_unknown='ignore',sparse_ouput=False)
+        self.enc = enc
     def fit(self,X,y=None):
         self.LIM = [column for column in X.columns if 'LIMIT_BAL' in column]
         if self.OH_columns is None:
             self.enc.fit(X[self.columns],y)
+            return self
         self.enc.fit(X[self.OH_columns],y)
         return self
     def transform(self, X, y=None):
