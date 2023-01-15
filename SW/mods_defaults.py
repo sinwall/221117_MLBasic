@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
-import os
+from sklearn.preprocessing import OneHotEncoder
 
 from sklearn.base import TransformerMixin, BaseEstimator
-from scipy.stats import kurtosis
 from tsfresh.feature_extraction.extraction import extract_features
 
 class ElementaryExtractor(BaseEstimator, TransformerMixin):
@@ -22,10 +21,8 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
         'l2_sum_diff2_',
         'std_',
         'iqr_',
-        'kurt_',
         'std_diff_',
         'iqr_diff_',
-        'kurt_diff_',
         ]
     def __init__(self,channel_list=None):
         self.channel_list = channel_list
@@ -148,7 +145,7 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
             df_log =df_log.rename(rename_dict,axis=1)
             df = pd.concat([df,df_log[[column for column in df_log.columns if column !='ID']]],axis=1)
             return df[self.log_columns]
-        return df[self.columns]
+        return df[self.raw_columns]
         # return df[self.columns].to_numpy()
     
 from pyts.multivariate.transformation import MultivariateTransformer
@@ -235,10 +232,20 @@ class NonTsPass(BaseEstimator, TransformerMixin):
     columns = [
         'SEX',
         'EDUCATION',
-        'AGE',
-        'log_LIMIT_BAL'
-    ]
+        'AGE']
+    def __init__(self,OH_columns=None,enc=None):
+        self.OH_columns = OH_columns
+        self.enc = OneHotEncoder(handle_unknown='ignore',sparse_ouput=False)
     def fit(self,X,y=None):
+        self.LIM = [column for column in X.columns if 'LIMIT_BAL' in column]
+        if self.OH_columns is None:
+            self.enc.fit(X[self.columns],y)
+        self.enc.fit(X[self.OH_columns],y)
         return self
     def transform(self, X, y=None):
-        return X[self.columns]
+        if self.OH_columns is None:
+            return np.concatenate([X[self.LIM],self.enc.transform(X[self.columns])],axis=1)
+        return np.concatenate([
+                                X[self.LIM+[column for column in self.columns if column not in self.OH_columns]]
+                                ,self.enc.transform(X[self.OH_columns])
+                                ],axis=1)
