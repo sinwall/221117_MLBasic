@@ -7,6 +7,7 @@ from scipy.stats import kurtosis
 from tsfresh.feature_extraction.extraction import extract_features
 
 class ElementaryExtractor(BaseEstimator, TransformerMixin):
+    version = 2 #moved self. features to use to transform
     stat_list = [
         'mean_',
         'med_val_',
@@ -27,15 +28,15 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
         'kurt_diff_',
         ]
     def __init__(self,channel_list=None):
-        self.features_to_use = []
         self.channel_list = channel_list
-        for i,channel in enumerate(self.channel_list):
-            c_name = channel[0][:channel[0].rfind('_')]
-            self.features_to_use +=[f_name+c_name for f_name in self.stat_list] 
     def fit(self, X,y=None):
         return self
     
     def transform(self, X, y=None):
+        self.features_to_use = []
+        for i,channel in enumerate(self.channel_list):
+            c_name = channel[0][:channel[0].rfind('_')]
+            self.features_to_use +=[f_name+c_name for f_name in self.stat_list] 
         if self.channel_list is not None:
             sample_size,_ =X.shape
             _,channel_length =X[self.channel_list[0]].shape
