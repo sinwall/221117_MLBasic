@@ -7,7 +7,7 @@ from scipy.stats import kurtosis
 from tsfresh.feature_extraction.extraction import extract_features
 
 class ElementaryExtractor(BaseEstimator, TransformerMixin):
-    version = 2 #moved self. features to use to transform
+    version = 3 #moved self. features to use to transform
     stat_list = [
         'mean_',
         'med_val_',
@@ -74,11 +74,11 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
             # standard deviation
             features[f'std_{c_name}'] = np.std(channel, axis=1)
             features[f'iqr_{c_name}'] = np.quantile(channel, 0.75, axis=1) - np.quantile(channel, 0.25, axis=1)
-            features[f'kurt_{c_name}'] = kurtosis(channel, axis=1)
+            #features[f'kurt_{c_name}'] = kurtosis(channel, axis=1)
 
             features[f'std_diff_{c_name}'] = np.std(np.diff(channel, axis=1), axis=1)
             features[f'iqr_diff_{c_name}'] = np.quantile(np.diff(channel, axis=1), 0.75, axis=1) - np.quantile(np.diff(channel, axis=1), 0.25, axis=1)
-            features[f'kurt_diff_{c_name}'] = kurtosis(np.diff(channel, axis=1), axis=1)
+            #features[f'kurt_diff_{c_name}'] = kurtosis(np.diff(channel, axis=1), axis=1)
 
         # features[f'up_count_02'] = np.sum(np.diff(sensor_02, axis=1) >= 0, axis=1)
         # features[f'up_sum_02'] = np.sum(np.clip(np.diff(sensor_02, axis=1), 0, None), axis=1)
@@ -94,20 +94,14 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
 
 from sklearn.base import TransformerMixin, BaseEstimator
 class BasicTransformer(BaseEstimator,TransformerMixin):
-    version= 2
-    columns=['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
+    version= 3
+    raw_columns=['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
        'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6', 'BILL_AMT_1', 'BILL_AMT_2',
        'BILL_AMT_3', 'BILL_AMT_4', 'BILL_AMT_5', 'BILL_AMT_6', 'PAY_AMT_1',
        'PAY_AMT_2', 'PAY_AMT_3', 'PAY_AMT_4', 'PAY_AMT_5', 'PAY_AMT_6', 
        'USAGE_1', 'USAGE_2', 'USAGE_3', 'USAGE_4', 'USAGE_5',
        'DIFF_0', 'DIFF_1', 'DIFF_2', 'DIFF_3',
-       'DIFF_4', 'log_LIMIT_BAL', 'log_BILL_AMT_1', 'log_BILL_AMT_2',
-       'log_BILL_AMT_3', 'log_BILL_AMT_4', 'log_BILL_AMT_5', 'log_BILL_AMT_6',
-       'log_PAY_AMT_1', 'log_PAY_AMT_2', 'log_PAY_AMT_3', 'log_PAY_AMT_4',
-       'log_PAY_AMT_5', 'log_PAY_AMT_6', 'log_USAGE_1', 'log_USAGE_2',
-       'log_USAGE_3', 'log_USAGE_4', 'log_USAGE_5', 'log_DIFF_0',
-       'log_DIFF_1', 'log_DIFF_2', 'log_DIFF_3',
-       'log_DIFF_4']
+       'DIFF_4']
     log_columns=['log_LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
        'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6',
        'log_BILL_AMT_1','log_BILL_AMT_2', 'log_BILL_AMT_3', 'log_BILL_AMT_4', 'log_BILL_AMT_5',
@@ -140,21 +134,20 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
         USAGE = [column for column in df_usage.columns if column !='ID']
         DIFF = [column for column in df_difference.columns if column !='ID']
         LIM =['LIMIT_BAL']
-        ## Logarithmic Scaling attribute 
-        df = pd.concat([df,df_usage.iloc[:,1:],df_difference.iloc[:,1:]],axis=1)
-        df_log =pd.concat([df.ID,df[LIM+BILL+PAY+USAGE+DIFF].apply(self.log_pre_col,axis=0)],axis=1) #apply(function,axis=) map of those who use index/column as a index
-        rename_dict = {}
-        for i in df_log.iloc[:,1:].columns:
-            rename_dict[i] = 'log_'+i
-        df_log =df_log.rename(rename_dict,axis=1)
         self.BILL = BILL
         self.PAY =PAY
         self.DIFF = DIFF
         self.USAGE =USAGE
-        df = pd.concat([df,df_log[[column for column in df_log.columns if column !='ID']]],axis=1)
+        df = pd.concat([df,df_usage.iloc[:,1:],df_difference.iloc[:,1:]],axis=1)
+        ## Logarithmic Scaling attribute 
         if self.scale == 'log':
+            df_log =pd.concat([df.ID,df[LIM+BILL+PAY+USAGE+DIFF].apply(self.log_pre_col,axis=0)],axis=1) #apply(function,axis=) map of those who use index/column as a index
+            rename_dict = {}
+            for i in df_log.iloc[:,1:].columns:
+                rename_dict[i] = 'log_'+i
+            df_log =df_log.rename(rename_dict,axis=1)
+            df = pd.concat([df,df_log[[column for column in df_log.columns if column !='ID']]],axis=1)
             return df[self.log_columns]
-        #    return df[self.log_columns].to_numpy()
         return df[self.columns]
         # return df[self.columns].to_numpy()
     
