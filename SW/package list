@@ -1,0 +1,8 @@
+package list
+python3.10 (for pyts)
+scikit-learn
+pandas
+pyts
+xlrd
+matplotlib
+tsfresh

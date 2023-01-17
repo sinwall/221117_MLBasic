@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
-import os
+from sklearn.preprocessing import OneHotEncoder
 
 from sklearn.base import TransformerMixin, BaseEstimator
-from scipy.stats import kurtosis
 from tsfresh.feature_extraction.extraction import extract_features
 
 class ElementaryExtractor(BaseEstimator, TransformerMixin):
+    version = 3 #moved self. features to use to transform
     stat_list = [
         'mean_',
         'med_val_',
@@ -21,21 +21,19 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
         'l2_sum_diff2_',
         'std_',
         'iqr_',
-        'kurt_',
         'std_diff_',
         'iqr_diff_',
-        'kurt_diff_',
         ]
     def __init__(self,channel_list=None):
-        self.features_to_use = []
         self.channel_list = channel_list
-        for i,channel in enumerate(self.channel_list):
-            c_name = channel[0][:channel[0].rfind('_')]
-            self.features_to_use +=[f_name+c_name for f_name in self.stat_list] 
     def fit(self, X,y=None):
         return self
     
     def transform(self, X, y=None):
+        self.features_to_use = []
+        for i,channel in enumerate(self.channel_list):
+            c_name = channel[0][:channel[0].rfind('_')]
+            self.features_to_use +=[f_name+c_name for f_name in self.stat_list] 
         if self.channel_list is not None:
             sample_size,_ =X.shape
             _,channel_length =X[self.channel_list[0]].shape
@@ -73,11 +71,11 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
             # standard deviation
             features[f'std_{c_name}'] = np.std(channel, axis=1)
             features[f'iqr_{c_name}'] = np.quantile(channel, 0.75, axis=1) - np.quantile(channel, 0.25, axis=1)
-            features[f'kurt_{c_name}'] = kurtosis(channel, axis=1)
+            #features[f'kurt_{c_name}'] = kurtosis(channel, axis=1)
 
             features[f'std_diff_{c_name}'] = np.std(np.diff(channel, axis=1), axis=1)
             features[f'iqr_diff_{c_name}'] = np.quantile(np.diff(channel, axis=1), 0.75, axis=1) - np.quantile(np.diff(channel, axis=1), 0.25, axis=1)
-            features[f'kurt_diff_{c_name}'] = kurtosis(np.diff(channel, axis=1), axis=1)
+            #features[f'kurt_diff_{c_name}'] = kurtosis(np.diff(channel, axis=1), axis=1)
 
         # features[f'up_count_02'] = np.sum(np.diff(sensor_02, axis=1) >= 0, axis=1)
         # features[f'up_sum_02'] = np.sum(np.clip(np.diff(sensor_02, axis=1), 0, None), axis=1)
@@ -93,20 +91,14 @@ class ElementaryExtractor(BaseEstimator, TransformerMixin):
 
 from sklearn.base import TransformerMixin, BaseEstimator
 class BasicTransformer(BaseEstimator,TransformerMixin):
-    version= 2
-    columns=['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
+    version= 4
+    raw_columns=['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
        'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6', 'BILL_AMT_1', 'BILL_AMT_2',
        'BILL_AMT_3', 'BILL_AMT_4', 'BILL_AMT_5', 'BILL_AMT_6', 'PAY_AMT_1',
        'PAY_AMT_2', 'PAY_AMT_3', 'PAY_AMT_4', 'PAY_AMT_5', 'PAY_AMT_6', 
        'USAGE_1', 'USAGE_2', 'USAGE_3', 'USAGE_4', 'USAGE_5',
        'DIFF_0', 'DIFF_1', 'DIFF_2', 'DIFF_3',
-       'DIFF_4', 'log_LIMIT_BAL', 'log_BILL_AMT_1', 'log_BILL_AMT_2',
-       'log_BILL_AMT_3', 'log_BILL_AMT_4', 'log_BILL_AMT_5', 'log_BILL_AMT_6',
-       'log_PAY_AMT_1', 'log_PAY_AMT_2', 'log_PAY_AMT_3', 'log_PAY_AMT_4',
-       'log_PAY_AMT_5', 'log_PAY_AMT_6', 'log_USAGE_1', 'log_USAGE_2',
-       'log_USAGE_3', 'log_USAGE_4', 'log_USAGE_5', 'log_DIFF_0',
-       'log_DIFF_1', 'log_DIFF_2', 'log_DIFF_3',
-       'log_DIFF_4']
+       'DIFF_4']
     log_columns=['log_LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
        'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6',
        'log_BILL_AMT_1','log_BILL_AMT_2', 'log_BILL_AMT_3', 'log_BILL_AMT_4', 'log_BILL_AMT_5',
@@ -114,8 +106,9 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
        'log_PAY_AMT_4', 'log_PAY_AMT_5', 'log_PAY_AMT_6', 'log_USAGE_1',
        'log_USAGE_2', 'log_USAGE_3', 'log_USAGE_4', 'log_USAGE_5',
        'log_DIFF_0', 'log_DIFF_1', 'log_DIFF_2', 'log_DIFF_3', 'log_DIFF_4']
-    def __init__(self,scale = 'log'):            
+    def __init__(self,scale = 'log',manuel=None):            
         self.scale = scale 
+        self.manuel = manuel
     def fit(self,x=None , y = None):
         return self
     def log_pre (self,x):
@@ -139,22 +132,24 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
         USAGE = [column for column in df_usage.columns if column !='ID']
         DIFF = [column for column in df_difference.columns if column !='ID']
         LIM =['LIMIT_BAL']
-        ## Logarithmic Scaling attribute 
+        self.BILL = BILL
+        self.PAY =PAY
+        self.DIFF = DIFF
+        self.USAGE =USAGE
         df = pd.concat([df,df_usage.iloc[:,1:],df_difference.iloc[:,1:]],axis=1)
+        ## Logarithmic Scaling attribute 
+        if self.manuel == None:
+            if self.scale != 'log':
+                return df[self.raw_columns]
         df_log =pd.concat([df.ID,df[LIM+BILL+PAY+USAGE+DIFF].apply(self.log_pre_col,axis=0)],axis=1) #apply(function,axis=) map of those who use index/column as a index
         rename_dict = {}
         for i in df_log.iloc[:,1:].columns:
             rename_dict[i] = 'log_'+i
         df_log =df_log.rename(rename_dict,axis=1)
-        self.BILL = BILL
-        self.PAY =PAY
-        self.DIFF = DIFF
-        self.USAGE =USAGE
         df = pd.concat([df,df_log[[column for column in df_log.columns if column !='ID']]],axis=1)
-        if self.scale == 'log':
+        if self.scale == 'log' :
             return df[self.log_columns]
-        #    return df[self.log_columns].to_numpy()
-        return df[self.columns]
+        return df[self.manuel]
         # return df[self.columns].to_numpy()
     
 from pyts.multivariate.transformation import MultivariateTransformer
@@ -241,10 +236,23 @@ class NonTsPass(BaseEstimator, TransformerMixin):
     columns = [
         'SEX',
         'EDUCATION',
-        'AGE',
-        'log_LIMIT_BAL'
-    ]
+        'MARRIAGE'
+       # 'AGE'
+        ]
+    def __init__(self,OH_columns=None,enc=OneHotEncoder(handle_unknown='ignore',sparse_output=False)):
+        self.OH_columns = OH_columns
+        self.enc = enc
     def fit(self,X,y=None):
+        self.LIM = [column for column in X.columns if 'LIMIT_BAL' in column]
+        if self.OH_columns is None:
+            self.enc.fit(X[self.columns],y)
+            return self
+        self.enc.fit(X[self.OH_columns],y)
         return self
     def transform(self, X, y=None):
-        return X[self.columns]
+        if self.OH_columns is None:
+            return np.concatenate([X[self.LIM],self.enc.transform(X[self.columns])],axis=1)
+        return np.concatenate([
+                                X[self.LIM+[column for column in self.columns if column not in self.OH_columns]]
+                                ,self.enc.transform(X[self.OH_columns])
+                                ],axis=1)
