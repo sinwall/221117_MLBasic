@@ -1,4 +1,4 @@
-package list:
+package list
 python3.10 (for pyts)
 scikit-learn
 pandas
