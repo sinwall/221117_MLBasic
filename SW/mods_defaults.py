@@ -256,3 +256,13 @@ class NonTsPass(BaseEstimator, TransformerMixin):
                                 X[self.LIM+[column for column in self.columns if column not in self.OH_columns]]
                                 ,self.enc.transform(X[self.OH_columns])
                                 ],axis=1)
+
+class Passer(BaseEstimator,TransformerMixin):
+        def __init__(self,columns=None):
+            self.columns=columns
+        def fit(self,X,y=None):
+            return self
+        def transform(self,X,y=None):
+            if self.columns is None:
+                return X
+            return X[self.columns]
