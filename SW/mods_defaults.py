@@ -97,15 +97,15 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
        'BILL_AMT_3', 'BILL_AMT_4', 'BILL_AMT_5', 'BILL_AMT_6', 'PAY_AMT_1',
        'PAY_AMT_2', 'PAY_AMT_3', 'PAY_AMT_4', 'PAY_AMT_5', 'PAY_AMT_6', 
        'USAGE_1', 'USAGE_2', 'USAGE_3', 'USAGE_4', 'USAGE_5',
-       'DIFF_0', 'DIFF_1', 'DIFF_2', 'DIFF_3',
-       'DIFF_4']
+       'DIFF_1', 'DIFF_2', 'DIFF_3', 'DIFF_4',
+       'DIFF_5']
     log_columns=['log_LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_1',
        'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6',
        'log_BILL_AMT_1','log_BILL_AMT_2', 'log_BILL_AMT_3', 'log_BILL_AMT_4', 'log_BILL_AMT_5',
        'log_BILL_AMT_6', 'log_PAY_AMT_1', 'log_PAY_AMT_2', 'log_PAY_AMT_3',
        'log_PAY_AMT_4', 'log_PAY_AMT_5', 'log_PAY_AMT_6', 'log_USAGE_1',
        'log_USAGE_2', 'log_USAGE_3', 'log_USAGE_4', 'log_USAGE_5',
-       'log_DIFF_0', 'log_DIFF_1', 'log_DIFF_2', 'log_DIFF_3', 'log_DIFF_4']
+       'log_DIFF_1', 'log_DIFF_2', 'log_DIFF_3', 'log_DIFF_4', 'log_DIFF_5']
     def __init__(self,scale = 'log',manuel=None):            
         self.scale = scale 
         self.manuel = manuel
@@ -128,7 +128,7 @@ class BasicTransformer(BaseEstimator,TransformerMixin):
         df_difference =pd.DataFrame()
         df_difference['ID'] = df.ID
         for i in range(5):
-            df_difference[f"DIFF_{i}"] = df[BILL[i+1]]-df[PAY[i]]
+            df_difference[f"DIFF_{i+1}"] = df[BILL[i+1]]-df[PAY[i]]
         USAGE = [column for column in df_usage.columns if column !='ID']
         DIFF = [column for column in df_difference.columns if column !='ID']
         LIM =['LIMIT_BAL']
