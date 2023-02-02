@@ -266,3 +266,59 @@ class Passer(BaseEstimator,TransformerMixin):
             if self.columns is None:
                 return X
             return X[self.columns]
+
+
+
+###                         
+from data_loader_default import load_data_default
+load_data = load_data_default()
+class AllPerturb():
+    def __init__(self, random_state=None):
+        self.random_state = random_state
+        
+    def fit(self, X, y):
+        return self
+    
+    def transform(self, X, y):
+        BILL = load_data.BILL.copy()
+        BILL.pop(0)
+        PAY = load_data.PAY.copy()
+        PAY.pop(-1)
+        rng = np.random.default_rng(self.random_state)
+        X_aug, y_aug = X.copy(), y.copy()
+        X_aug[BILL] *= (0.9 + 0.2*rng.random(X_aug[BILL].shape))
+        X_aug[BILL] = X_aug[BILL].astype('int')
+        X_aug['ID'] += 30001
+        y_aug.index += 30000+1
+        pay_perturb=(X_aug[BILL]-X[BILL]).to_numpy()
+        X_aug[PAY] += pay_perturb
+        X = pd.concat([X, X_aug], axis=0, ignore_index=True)
+        y = pd.concat([y, y_aug], axis=0, ignore_index=False)
+        return X,y 
+
+class PositivePerturb():
+    def __init__(self, random_state=None,dup_num=1):
+        self.random_state = random_state
+        self.dup_num = dup_num
+    def fit(self, X, y):
+        return self
+    
+    def transform(self, X, y):
+        BILL = load_data.BILL.copy()
+        BILL.pop(0)
+        PAY = load_data.PAY.copy()
+        PAY.pop(-1)
+        rng = np.random.default_rng(self.random_state)
+        X_transform = X.copy()
+        y_transform = y.copy()
+        for i in range(self.dup_num):
+            X_aug, y_aug = X.loc[y==1].copy(), y.loc[y==1].copy()
+            X_aug[BILL] *= (0.9 + 0.2*rng.random(X_aug[BILL].shape))
+            X_aug[BILL] = X_aug[BILL].astype('int')
+            X_aug['ID'] += 30000*(i+1)+1
+            y_aug.index += 30000*(i+1)+1
+            pay_perturb=(X_aug[BILL]-X.loc[y==1][BILL]).to_numpy()
+            X_aug[PAY] += pay_perturb
+            X_transform = pd.concat([X_transform, X_aug], axis=0, ignore_index=True)
+            y_transform = pd.concat([y_transform, y_aug], axis=0, ignore_index=False)
+        return X_transform,y_transform
