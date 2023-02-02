@@ -1,7 +1,8 @@
 import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import StratifiedKFold
-
+from mods_defaults import BasicTransformer
+my_basic_transformer = BasicTransformer('')
 
 class load_data_default ():
     '''
@@ -39,6 +40,7 @@ class load_data_default ():
         self.BILL =BILL
         self.PAY = PAY
         df = df_original.copy()
+        df_t = my_basic_transformer.transform(df)
         N_labels = [column for column in df_original.columns if column !='default']
         split = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
         for train_index , test_index in split.split(df,df.iloc[:,[2,-1]]):
@@ -46,7 +48,10 @@ class load_data_default ():
             self.df_test, self.label_test= df[N_labels].loc[test_index], df.default[test_index]
         if self.exclude == True:
             df= pd.concat([self.df_train,self.label_train] ,axis=1)
-            df = df.loc[((df.BILL_AMT_1>1001) | (df.default!=1)) & ((df.PAY_1!=-2) | (df.default!=1))]
+            df = df.loc[
+                        ((df.BILL_AMT_1>1001) | (df.default!=1)) &
+                        ((df.PAY_1!=-2) | (df.default!=1)) &
+                        ((df_t.DIFF_1>1501)|(df.default!=1)) ]
             self.df_train = df[[column for column in df.columns if column != 'default']]
             self.label_train = df.default
         self.StratifiedKFold =StratifiedKFold(n_splits=5,shuffle=True,random_state = 42)
